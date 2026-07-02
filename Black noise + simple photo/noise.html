@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Draggable Image Box</title>
+
+<style>
+    body {
+        margin: 0;
+        height: 100vh;
+        overflow: hidden;
+        background: #000;
+    }
+
+    canvas {
+        position: fixed;
+        top: 0;
+        left: 0;
+        z-index: 0;
+    }
+
+    #box {
+        width: 300px;
+        height: 200px;
+        position: absolute;
+        top: 100px;
+        left: 100px;
+        background: transparent;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: grab;
+        user-select: none;
+        overflow: hidden;
+        z-index: 1;
+    }
+
+    #box:active {
+        cursor: none; /* hide cursor while holding */
+    }
+
+    #box img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        pointer-events: none;
+        cursor: none; /* never show resize */
+    }
+</style>
+</head>
+<body>
+
+<canvas id="bg"></canvas>
+
+<div id="box">
+    <img src="mute_aesthetic.png">
+</div>
+
+<script>
+// 🌑 RANDOM NOISE BACKGROUND
+const canvas = document.getElementById("bg");
+const ctx = canvas.getContext("2d");
+
+canvas.width = window.innerWidth;
+canvas.height = window.innerHeight;
+
+function drawNoise() {
+    const imageData = ctx.createImageData(canvas.width, canvas.height);
+    const data = imageData.data;
+
+    for (let i = 0; i < data.length; i += 4) {
+        // random dark grayscale (black → charcoal)
+        let shade = Math.random() * 60; // 0–60 range
+
+        data[i] = shade;     // R
+        data[i+1] = shade;   // G
+        data[i+2] = shade;   // B
+        data[i+3] = 255;     // A
+    }
+
+    ctx.putImageData(imageData, 0, 0);
+}
+
+// fast animation
+function animateBG() {
+    drawNoise();
+    requestAnimationFrame(animateBG);
+}
+
+animateBG();
+
+
+// 🟦 DRAG BOX + HIDE CURSOR
+const box = document.getElementById("box");
+
+let offsetX, offsetY, isDragging = false;
+
+box.addEventListener("mousedown", (e) => {
+    isDragging = true;
+    offsetX = e.clientX - box.offsetLeft;
+    offsetY = e.clientY - box.offsetTop;
+
+    document.body.style.cursor = "none"; // hide globally
+});
+
+document.addEventListener("mousemove", (e) => {
+    if (isDragging) {
+        box.style.left = (e.clientX - offsetX) + "px";
+        box.style.top = (e.clientY - offsetY) + "px";
+    }
+});
+
+document.addEventListener("mouseup", () => {
+    isDragging = false;
+    document.body.style.cursor = "default"; // restore cursor
+});
+
+
+// 🟩 DRAG-DROP IMAGE
+box.addEventListener("dragover", (e) => e.preventDefault());
+
+box.addEventListener("drop", (e) => {
+    e.preventDefault();
+
+    const file = e.dataTransfer.files[0];
+
+    if (file && file.type.startsWith("image/")) {
+        const reader = new FileReader();
+
+        reader.onload = function(event) {
+            box.innerHTML = `<img src="${event.target.result}">`;
+        };
+
+        reader.readAsDataURL(file);
+    }
+});
+
+
+// Resize fix
+window.addEventListener("resize", () => {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+});
+</script>
+
+</body>
+</html>
